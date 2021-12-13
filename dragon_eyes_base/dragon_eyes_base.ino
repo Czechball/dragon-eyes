@@ -26,6 +26,7 @@ int eyeSocketPosy = display.height()/2;
 // default animation speeds
 
 int lidSpeed = 8;
+int irisSpeed = 0.5;
 
 void setup() {
   Serial.begin(115200);
@@ -37,12 +38,16 @@ void setup() {
 
   eyesOpen(lidSpeed, eyeSocketSizey);
 
-  eyes(eyeSocketPosx, eyeSocketPosy, eyeSocketSizex, eyeSocketSizey, eyeIrisPosx, eyeIrisPosy, eyeIrisSizex, eyeIrisSizey);
+  eyes();
 }
 
 void loop() {
   delay(500);
   eyesBlink(300);
+  delay(500);
+  eyesLookx(irisSpeed, 8);
+  delay(500);
+  eyesLookx(irisSpeed, -8);
   delay(1000);
   eyesClose(lidSpeed, 1);
   delay(1000);
@@ -54,6 +59,11 @@ void eyes(int eyeSocketPosx, int eyeSocketPosy, int eyeSocketSizex, int eyeSocke
   drawSocket(eyeSocketPosx, eyeSocketPosy, eyeSocketSizex, eyeSocketSizey);
   drawIris(eyeIrisPosx, eyeIrisPosy, eyeIrisSizex, eyeIrisSizey);
   display.display();
+}
+
+void eyes()
+{
+  eyes(eyeSocketPosx, eyeSocketPosy, eyeSocketSizex, eyeSocketSizey, eyeIrisPosx, eyeIrisPosy, eyeIrisSizex, eyeIrisSizey);
 }
 
 void drawSocket(int posx, int posy, int sizex, int sizey) {
@@ -89,7 +99,7 @@ void eyesOpen(int increment, int finalSize) {
 
 void eyesClose(int increment, int finalSize) {
   display.clearDisplay();
-  eyes(eyeSocketPosx, eyeSocketPosy, eyeSocketSizex, eyeSocketSizey, eyeIrisPosx, eyeIrisPosy, eyeIrisSizex, eyeIrisSizey);
+  eyes();
   display.display();
   delay(500);
   for (int i = eyeSocketSizey; i > 1; i = i - increment)
@@ -113,6 +123,16 @@ void eyesBlink(int duration) {
   eyes(eyeSocketPosx, eyeSocketPosy, eyeSocketSizex, 4, eyeIrisPosx, eyeIrisPosy, 0, 0);
   display.display();
   delay(duration);
-  eyes(eyeSocketPosx, eyeSocketPosy, eyeSocketSizex, eyeSocketSizey, eyeIrisPosx, eyeIrisPosy, eyeIrisSizex, eyeIrisSizey);
+  eyes();
   display.display();
+}
+
+void eyesLookx(int increment, int distance) {
+  display.clearDisplay();
+  int finalSize = 0;
+  finalSize = eyeIrisPosx + distance;
+  eyes(eyeSocketPosx, eyeSocketPosy, eyeSocketSizex, eyeSocketSizey, finalSize, eyeIrisPosy, eyeIrisSizex, eyeIrisSizey);
+  display.display();
+  delay(500);
+  eyes();
 }
