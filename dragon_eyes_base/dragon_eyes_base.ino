@@ -10,7 +10,7 @@
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 int eyeDir;
-String eyeValue;
+String eyeValue = "15";
 
 void setup() {
   Serial.begin(115200);
