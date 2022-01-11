@@ -111,17 +111,38 @@ void setupServer(){
 void setup() {
   Serial.begin(115200);
 
+  Serial.println();
+  Serial.println("Setting up AP Mode");
+  WiFi.mode(WIFI_AP); 
+  WiFi.softAP(ssid, password);
+  Serial.print("AP IP address: ");Serial.println(WiFi.softAPIP());
+  Serial.println("Setting up Async WebServer");
+  setupServer();
+  Serial.println("Starting DNS Server");
+  dnsServer.start(53, "*", WiFi.softAPIP());
+  server.addHandler(new CaptiveRequestHandler()).setFilter(ON_AP_FILTER);//only when requested from AP
+  server.begin();
+
+  Serial.println("Initializing display...")
   // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
   if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
     Serial.println(F("SSD1306 allocation failed"));
   }
 
   eyesOpen(lidSpeed, eyeSocketSizey);
-
+  Serial.println("All Done, starting eyes...")
   eyes();
 }
 
 void loop() {
+   dnsServer.processNextRequest();
+    if(name_received && proficiency_received){
+      Serial.print("Hello ");Serial.println(user_name);
+      Serial.print("You have stated your proficiency to be ");Serial.println(proficiency);
+      name_received = false;
+      proficiency_received = false;
+      Serial.println("We'll wait for the next client now");
+  }
   delay(500);
   eyesBlink(300);
   delay(500);
