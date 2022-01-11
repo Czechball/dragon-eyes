@@ -79,6 +79,35 @@ int eyeSocketPosy = display.height()/2;
 int lidSpeed = 8;
 int irisSpeed = 0.5;
 
+void setupServer(){
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+      request->send_P(200, "text/html", index_html); 
+      Serial.println("Client Connected");
+  });
+    
+  server.on("/get", HTTP_GET, [] (AsyncWebServerRequest *request) {
+      String inputMessage;
+      String inputParam;
+  
+      if (request->hasParam("name")) {
+        inputMessage = request->getParam("name")->value();
+        inputParam = "name";
+        user_name = inputMessage;
+        Serial.println(inputMessage);
+        name_received = true;
+      }
+
+      if (request->hasParam("proficiency")) {
+        inputMessage = request->getParam("proficiency")->value();
+        inputParam = "proficiency";
+        proficiency = inputMessage;
+        Serial.println(inputMessage);
+        proficiency_received = true;
+      }
+      request->send(200, "text/html", "The values entered by you have been successfully sent to the device <br><a href=\"/\">Return to Home Page</a>");
+  });
+}
+
 void setup() {
   Serial.begin(115200);
 
