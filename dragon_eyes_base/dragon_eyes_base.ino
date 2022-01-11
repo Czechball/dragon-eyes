@@ -45,6 +45,21 @@ const char index_html[] PROGMEM = R"rawliteral(
 #define SCREEN_ADDRESS	0x3C
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
+class CaptiveRequestHandler : public AsyncWebHandler {
+public:
+  CaptiveRequestHandler() {}
+  virtual ~CaptiveRequestHandler() {}
+
+  bool canHandle(AsyncWebServerRequest *request){
+    //request->addInterestingHeader("ANY");
+    return true;
+  }
+
+  void handleRequest(AsyncWebServerRequest *request) {
+    request->send_P(200, "text/html", index_html); 
+  }
+};
+
 // default iris values
 
 int eyeIrisSizex = 32;
