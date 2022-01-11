@@ -91,12 +91,11 @@ void setupServer(){
       if (request->hasParam("open")) {
         webOpen = true;
       }
-
       if (request->hasParam("close")) {
         webClose = true;
       }
       if (request->hasParam("idle")) {
-        webClose = true;
+        webIdle = true;
       }
       request->send(200, "text/html", "The eye command has been sent <br><a href=\"/\">Return to Home Page</a>");
   });
