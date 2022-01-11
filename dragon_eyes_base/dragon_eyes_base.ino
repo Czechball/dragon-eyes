@@ -18,6 +18,27 @@ bool proficiency_received = false;
 const char *ssid = "Dragon's Eyes";
 const char *password = "12345678";
 
+const char index_html[] PROGMEM = R"rawliteral(
+<!DOCTYPE HTML><html><head>
+  <title>Captive Portal Demo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  </head><body>
+  <h3>Captive Portal Demo</h3>
+  <br><br>
+  <form action="/get">
+    <br>
+    Name: <input type="text" name="name">
+    <br>
+    ESP32 Proficiency: 
+    <select name = "proficiency">
+      <option value=Beginner>Beginner</option>
+      <option value=Advanced>Advanced</option>
+      <option value=Pro>Pro</option>
+    </select>
+    <input type="submit" value="Submit">
+  </form>
+</body></html>)rawliteral";
+
 #define SCREEN_WIDTH	128
 #define SCREEN_HEIGHT	64
 #define OLED_RESET		-1
