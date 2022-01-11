@@ -20,22 +20,15 @@ const char *password = "12345678";
 
 const char index_html[] PROGMEM = R"rawliteral(
 <!DOCTYPE HTML><html><head>
-  <title>Captive Portal Demo</title>
+  <title>Eye Control</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   </head><body>
-  <h3>Captive Portal Demo</h3>
+  <h3>ESP OLED Eyes Control Panel</h3>
   <br><br>
   <form action="/get">
-    <br>
-    Name: <input type="text" name="name">
-    <br>
-    ESP32 Proficiency: 
-    <select name = "proficiency">
-      <option value=Beginner>Beginner</option>
-      <option value=Advanced>Advanced</option>
-      <option value=Pro>Pro</option>
-    </select>
-    <input type="submit" value="Submit">
+    <input type="submit" name="open" value="Open">
+    <input type="submit" name="close" value="Close">
+    <input type="submit" name="idle" value="Idle">
   </form>
 </body></html>)rawliteral";
 
@@ -79,6 +72,12 @@ int eyeSocketPosy = display.height()/2;
 int lidSpeed = 8;
 int irisSpeed = 0.5;
 
+// default web requests statuses
+
+bool webOpen;
+bool webClose;
+bool webIdle;
+
 void setupServer(){
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
       request->send_P(200, "text/html", index_html); 
@@ -86,25 +85,20 @@ void setupServer(){
   });
     
   server.on("/get", HTTP_GET, [] (AsyncWebServerRequest *request) {
-      String inputMessage;
-      String inputParam;
-  
-      if (request->hasParam("name")) {
-        inputMessage = request->getParam("name")->value();
-        inputParam = "name";
-        user_name = inputMessage;
-        Serial.println(inputMessage);
-        name_received = true;
+    webOpen = false;
+    webClose = false;
+    webIdle = false;
+      if (request->hasParam("open")) {
+        webOpen = true;
       }
 
-      if (request->hasParam("proficiency")) {
-        inputMessage = request->getParam("proficiency")->value();
-        inputParam = "proficiency";
-        proficiency = inputMessage;
-        Serial.println(inputMessage);
-        proficiency_received = true;
+      if (request->hasParam("close")) {
+        webClose = true;
       }
-      request->send(200, "text/html", "The values entered by you have been successfully sent to the device <br><a href=\"/\">Return to Home Page</a>");
+      if (request->hasParam("idle")) {
+        webClose = true;
+      }
+      request->send(200, "text/html", "The eye command has been sent <br><a href=\"/\">Return to Home Page</a>");
   });
 }
 
@@ -123,36 +117,54 @@ void setup() {
   server.addHandler(new CaptiveRequestHandler()).setFilter(ON_AP_FILTER);//only when requested from AP
   server.begin();
 
-  Serial.println("Initializing display...")
+  Serial.println("Initializing display...");
   // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
   if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
     Serial.println(F("SSD1306 allocation failed"));
   }
 
   eyesOpen(lidSpeed, eyeSocketSizey);
-  Serial.println("All Done, starting eyes...")
+  Serial.println("All Done, starting eyes...");
   eyes();
 }
 
 void loop() {
-   dnsServer.processNextRequest();
-    if(name_received && proficiency_received){
-      Serial.print("Hello ");Serial.println(user_name);
-      Serial.print("You have stated your proficiency to be ");Serial.println(proficiency);
-      name_received = false;
-      proficiency_received = false;
-      Serial.println("We'll wait for the next client now");
+  dnsServer.processNextRequest();
+  if (webClose == true)
+  {
+    eyesClose(lidSpeed, 1);
+    webClose = false;
+    webIdle = false;
   }
-  delay(500);
-  eyesBlink(300);
-  delay(500);
-  eyesLookx(irisSpeed, 8);
-  delay(500);
-  eyesLookx(irisSpeed, -8);
-  delay(1000);
-  eyesClose(lidSpeed, 1);
-  delay(1000);
-  eyesOpen(lidSpeed, eyeSocketSizey);
+  if (webOpen == true)
+  {
+    eyesOpen(lidSpeed, eyeSocketSizey);
+    webOpen = false;
+    webIdle = false;
+  }
+  while (webIdle == true)
+  {
+    eyesIdle();
+  }
+  // delay(500);
+  // dnsServer.processNextRequest();
+  // eyesBlink(300);
+  // dnsServer.processNextRequest();
+  // delay(500);
+  // dnsServer.processNextRequest();
+  // eyesLookx(irisSpeed, 8);
+  // dnsServer.processNextRequest();
+  // delay(500);
+  // dnsServer.processNextRequest();
+  // eyesLookx(irisSpeed, -8);
+  // dnsServer.processNextRequest();
+  // delay(1000);
+  // dnsServer.processNextRequest();
+  // eyesClose(lidSpeed, 1);
+  // dnsServer.processNextRequest();
+  // delay(1000);
+  // dnsServer.processNextRequest();
+  // eyesOpen(lidSpeed, eyeSocketSizey);
 }
 
 void eyes(int eyeSocketPosx, int eyeSocketPosy, int eyeSocketSizex, int eyeSocketSizey, int eyeIrisPosx, int eyeIrisPosy, int eyeIrisSizex, int eyeIrisSizey) {
@@ -236,4 +248,17 @@ void eyesLookx(int increment, int distance) {
   display.display();
   delay(500);
   eyes();
+}
+
+void eyesIdle() {
+  eyesBlink(300);
+  delay(500);
+  eyesLookx(irisSpeed, 8);
+  delay(500);
+  eyesLookx(irisSpeed, -8);
+  delay(1000);
+  eyesClose(lidSpeed, 1);
+  delay(1000);
+  eyesOpen(lidSpeed, eyeSocketSizey);
+  delay(500);
 }
