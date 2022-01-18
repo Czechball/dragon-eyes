@@ -74,9 +74,7 @@ int irisSpeed = 0.5;
 
 // default web requests statuses
 
-bool webOpen;
-bool webClose;
-bool webIdle;
+enum web { NONE, OPEN, CLOSE, IDLE };
 
 void setupServer(){
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
@@ -85,17 +83,15 @@ void setupServer(){
   });
     
   server.on("/get", HTTP_GET, [] (AsyncWebServerRequest *request) {
-    webOpen = false;
-    webClose = false;
-    webIdle = false;
+    web = NONE;
       if (request->hasParam("open")) {
-        webOpen = true;
+        web = OPEN;
       }
       if (request->hasParam("close")) {
-        webClose = true;
+        web = CLOSE;
       }
       if (request->hasParam("idle")) {
-        webIdle = true;
+        web = IDLE;
       }
       request->send(200, "text/html", "The eye command has been sent <br><a href=\"/\">Return to Home Page</a>");
   });
@@ -129,21 +125,24 @@ void setup() {
 
 void loop() {
   dnsServer.processNextRequest();
-  if (webClose == true)
-  {
-    eyesClose(lidSpeed, 1);
-    webClose = false;
-    webIdle = false;
-  }
-  if (webOpen == true)
-  {
+  switch (web) {
+  case NONE:
+    eyes();
+    break;
+  case OPEN:
     eyesOpen(lidSpeed, eyeSocketSizey);
-    webOpen = false;
-    webIdle = false;
-  }
-  while (webIdle == true)
-  {
-    eyesIdle();
+    web = NONE; 
+    break;
+  case CLOSE;
+    eyesClose(lidSpeed, 1);
+    web = NONE;
+    break;
+  case IDLE;
+    eyesIdle()
+    break;
+  default:
+    eyesIdle()
+    break;
   }
   // delay(500);
   // dnsServer.processNextRequest();
@@ -260,4 +259,11 @@ void eyesIdle() {
   delay(1000);
   eyesOpen(lidSpeed, eyeSocketSizey);
   delay(500);
+}
+
+void idleDelay(int delaynum) {
+  if (web == IDLE)
+  {
+    delay(delaynum);
+  }
 }
