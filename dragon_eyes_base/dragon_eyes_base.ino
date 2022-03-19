@@ -7,6 +7,8 @@
 #include <AsyncTCP.h>
 #include "ESPAsyncWebServer.h"
 
+#define PCA_ADDR 0x77
+
 DNSServer dnsServer;
 AsyncWebServer server(80);
 
@@ -39,33 +41,33 @@ const char index_html[] PROGMEM = R"rawliteral(
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 class CaptiveRequestHandler : public AsyncWebHandler {
-public:
-  CaptiveRequestHandler() {}
-  virtual ~CaptiveRequestHandler() {}
+  public:
+    CaptiveRequestHandler() {}
+    virtual ~CaptiveRequestHandler() {}
 
-  bool canHandle(AsyncWebServerRequest *request){
-    //request->addInterestingHeader("ANY");
-    return true;
-  }
+    bool canHandle(AsyncWebServerRequest *request) {
+      //request->addInterestingHeader("ANY");
+      return true;
+    }
 
-  void handleRequest(AsyncWebServerRequest *request) {
-    request->send_P(200, "text/html", index_html); 
-  }
+    void handleRequest(AsyncWebServerRequest *request) {
+      request->send_P(200, "text/html", index_html);
+    }
 };
 
 // default iris values
 
 int eyeIrisSizex = 32;
 int eyeIrisSizey = 32;
-int eyeIrisPosx = display.width()/2;
-int eyeIrisPosy = display.height()/2;
+int eyeIrisPosx = display.width() / 2;
+int eyeIrisPosy = display.height() / 2;
 
 // default eyesocket values
 
 int eyeSocketSizex = 64;
 int eyeSocketSizey = 64;
-int eyeSocketPosx = display.width()/2;
-int eyeSocketPosy = display.height()/2;
+int eyeSocketPosx = display.width() / 2;
+int eyeSocketPosy = display.height() / 2;
 
 // default animation speeds
 
@@ -74,26 +76,27 @@ int irisSpeed = 0.5;
 
 // default web requests statuses
 
-enum web { NONE, OPEN, CLOSE, IDLE };
+enum { NONE_, OPEN_, CLOSE_, IDLE_ } web;
 
-void setupServer(){
-  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
-      request->send_P(200, "text/html", index_html); 
-      Serial.println("Client Connected");
+
+void setupServer() {
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest * request) {
+    request->send_P(200, "text/html", index_html);
+    Serial.println("Client Connected");
   });
-    
-  server.on("/get", HTTP_GET, [] (AsyncWebServerRequest *request) {
-    web = NONE;
-      if (request->hasParam("open")) {
-        web = OPEN;
-      }
-      if (request->hasParam("close")) {
-        web = CLOSE;
-      }
-      if (request->hasParam("idle")) {
-        web = IDLE;
-      }
-      request->send(200, "text/html", "The eye command has been sent <br><a href=\"/\">Return to Home Page</a>");
+
+  server.on("/get", HTTP_GET, [] (AsyncWebServerRequest * request) {
+    web = NONE_;
+    if (request->hasParam("open")) {
+      web = OPEN_;
+    }
+    if (request->hasParam("close")) {
+      web = CLOSE_;
+    }
+    if (request->hasParam("idle")) {
+      web = IDLE_;
+    }
+    request->send(200, "text/html", "The eye command has been sent <br><a href=\"/\">Return to Home Page</a>");
   });
 }
 
@@ -102,9 +105,9 @@ void setup() {
 
   Serial.println();
   Serial.println("Setting up AP Mode");
-  WiFi.mode(WIFI_AP); 
+  WiFi.mode(WIFI_AP);
   WiFi.softAP(ssid, password);
-  Serial.print("AP IP address: ");Serial.println(WiFi.softAPIP());
+  Serial.print("AP IP address: "); Serial.println(WiFi.softAPIP());
   Serial.println("Setting up Async WebServer");
   setupServer();
   Serial.println("Starting DNS Server");
@@ -114,7 +117,7 @@ void setup() {
 
   Serial.println("Initializing display...");
   // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
-  if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
+  if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
     Serial.println(F("SSD1306 allocation failed"));
   }
 
@@ -126,23 +129,23 @@ void setup() {
 void loop() {
   dnsServer.processNextRequest();
   switch (web) {
-  case NONE:
-    eyes();
-    break;
-  case OPEN:
-    eyesOpen(lidSpeed, eyeSocketSizey);
-    web = NONE; 
-    break;
-  case CLOSE;
-    eyesClose(lidSpeed, 1);
-    web = NONE;
-    break;
-  case IDLE;
-    eyesIdle()
-    break;
-  default:
-    eyesIdle()
-    break;
+    case NONE_:
+      eyes();
+      break;
+    case OPEN_:
+      eyesOpen(lidSpeed, eyeSocketSizey);
+      web = NONE_;
+      break;
+    case CLOSE_:
+      eyesClose(lidSpeed, 1);
+      web = NONE_;
+      break;
+    case IDLE_:
+      eyesIdle();
+      break;
+    default:
+      eyesIdle();
+      break;
   }
   // delay(500);
   // dnsServer.processNextRequest();
@@ -179,12 +182,12 @@ void eyes()
 
 void drawSocket(int posx, int posy, int sizex, int sizey) {
   // set eyesocket, position center
-  display.drawRoundRect(posx-sizex/2, posy-sizey/2, sizex, sizey, sizex*2, SSD1306_WHITE);
+  display.drawRoundRect(posx - sizex / 2, posy - sizey / 2, sizex, sizey, sizex * 2, SSD1306_WHITE);
 }
 
 void drawIris(int posx, int posy, int sizex, int sizey) {
   // set iris, position center + eyeDir
-  display.fillRoundRect(posx-sizex/2, posy-sizey/2, sizex, sizey, sizex*2, SSD1306_WHITE);
+  display.fillRoundRect(posx - sizex / 2, posy - sizey / 2, sizex, sizey, sizex * 2, SSD1306_WHITE);
 }
 
 void eyesOpen(int increment, int finalSize) {
@@ -193,16 +196,16 @@ void eyesOpen(int increment, int finalSize) {
   display.display();
   delay(500);
   for (int i = 1; i < finalSize; i = i + increment)
+  {
+    if (i <= eyeIrisSizey)
     {
-      if (i <= eyeIrisSizey)
-    {
-    eyes(eyeSocketPosx, eyeSocketPosy, eyeSocketSizex, i, eyeIrisPosx, eyeIrisPosy, 0, 0);
-  }
-  else
+      eyes(eyeSocketPosx, eyeSocketPosy, eyeSocketSizex, i, eyeIrisPosx, eyeIrisPosy, 0, 0);
+    }
+    else
     {
       eyes(eyeSocketPosx, eyeSocketPosy, eyeSocketSizex, i, eyeIrisPosx, eyeIrisPosy, eyeIrisSizex, eyeIrisSizey);
     }
-  display.display();
+    display.display();
   }
   eyes(eyeSocketPosx, eyeSocketPosy, eyeSocketSizex, finalSize, eyeIrisPosx, eyeIrisPosy, eyeIrisSizex, eyeIrisSizey);
   display.display();
@@ -214,16 +217,16 @@ void eyesClose(int increment, int finalSize) {
   display.display();
   delay(500);
   for (int i = eyeSocketSizey; i > 1; i = i - increment)
+  {
+    if (i >= eyeIrisSizey)
     {
-      if (i >= eyeIrisSizey)
-    {
-    eyes(eyeSocketPosx, eyeSocketPosy, eyeSocketSizex, i, eyeIrisPosx, eyeIrisPosy, eyeIrisSizex, eyeIrisSizey);
-  }
-  else
+      eyes(eyeSocketPosx, eyeSocketPosy, eyeSocketSizex, i, eyeIrisPosx, eyeIrisPosy, eyeIrisSizex, eyeIrisSizey);
+    }
+    else
     {
       eyes(eyeSocketPosx, eyeSocketPosy, eyeSocketSizex, i, eyeIrisPosx, eyeIrisPosy, 0, 0);
     }
-  display.display();
+    display.display();
   }
   eyes(eyeSocketPosx, eyeSocketPosy, eyeSocketSizex, finalSize, eyeIrisPosx, eyeIrisPosy, 0, 0);
   display.display();
@@ -262,8 +265,51 @@ void eyesIdle() {
 }
 
 void idleDelay(int delaynum) {
-  if (web == IDLE)
+  if (web == IDLE_)
   {
     delay(delaynum);
+  }
+}
+
+bool muxPortEnable(int muxAddres, bool enable, uint8_t port)
+{
+  Serial.println("muxPortEnable: entering function (address " + (String)muxAddres + ", enable " + (String)enable + ", port " + (String)port + ")");
+  uint8_t muxRes = 0;
+  uint32_t retbytes;
+
+  delay (5);
+  Wire.beginTransmission(muxAddres);
+  if (enable == true)port += 8;
+  if (port > 15)return true;
+
+  Wire.write(port);
+  Wire.endTransmission(true);
+
+//  if (Wire.lastError()) {
+//    Serial.println("muxPortEnable: I2C write error #" + (String)Wire.lastError());
+//    //resetI2C();
+//    return false;
+//  }
+
+  retbytes = Wire.requestFrom(muxAddres,  1, 1);
+
+//  if (Wire.lastError()) {
+//    Serial.println("muxPortEnable: I2C read error #" + (String)Wire.lastError());
+//    //resetI2C();
+//    return false;
+//  }
+
+  if (retbytes == 1) {
+    muxRes = Wire.read();
+    if (muxRes == port) {
+      delay (5);
+      return true;
+    } else {
+      Serial.println("muxPortEnable: I2C slave returned (" + (String)muxRes + ") instead of (" + (String)port + ")");
+      return false;
+    }
+  } else {
+    Serial.println("muxPortEnable: I2C slave did not return 1 byte");
+    return false;
   }
 }
