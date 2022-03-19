@@ -3,13 +3,13 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <DNSServer.h>
-#include <WiFi.h>
-#include <AsyncTCP.h>
-#include "ESPAsyncWebServer.h"
+#include <ESP8266WiFi.h>
+#include <ESPAsyncTCP.h>
+#include <ESPAsyncWebServer.h>
 
-#define PCA_ADDR 0x77
-#define LEFT_EYE_PORT 0
-#define RIGHT_EYE_PORT 1
+#define PCA_ADDR 0x70
+#define LEFT_EYE_PORT 1
+#define RIGHT_EYE_PORT 2
 
 DNSServer dnsServer;
 AsyncWebServer server(80);
@@ -344,7 +344,7 @@ void idleDelay(int delaynum) {
 
 bool muxPortEnable(int muxAddres, bool enable, uint8_t port)
 {
-  Serial.println("muxPortEnable: entering function (address " + (String)muxAddres + ", enable " + (String)enable + ", port " + (String)port + ")");
+  //Serial.println("muxPortEnable: entering function (address " + (String)muxAddres + ", enable " + (String)enable + ", port " + (String)port + ")");
   uint8_t muxRes = 0;
   uint32_t retbytes;
 
@@ -376,11 +376,11 @@ bool muxPortEnable(int muxAddres, bool enable, uint8_t port)
       delay (5);
       return true;
     } else {
-      Serial.println("muxPortEnable: I2C slave returned (" + (String)muxRes + ") instead of (" + (String)port + ")");
+      //Serial.println("muxPortEnable: I2C slave returned (" + (String)muxRes + ") instead of (" + (String)port + ")");
       return false;
     }
   } else {
-    Serial.println("muxPortEnable: I2C slave did not return 1 byte");
+    //Serial.println("muxPortEnable: I2C slave did not return 1 byte");
     return false;
   }
 }
