@@ -10,11 +10,6 @@
 DNSServer dnsServer;
 AsyncWebServer server(80);
 
-String user_name;
-String proficiency;
-bool name_received = false;
-bool proficiency_received = false;
-
 const char *ssid = "Dragon's Eyes";
 const char *password = "12345678";
 
