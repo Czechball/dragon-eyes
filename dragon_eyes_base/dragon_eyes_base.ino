@@ -8,6 +8,8 @@
 #include "ESPAsyncWebServer.h"
 
 #define PCA_ADDR 0x77
+#define LEFT_EYE_PORT 0
+#define RIGHT_EYE_PORT 1
 
 DNSServer dnsServer;
 AsyncWebServer server(80);
@@ -117,8 +119,14 @@ void setup() {
 
   Serial.println("Initializing display...");
   // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
+  muxPortEnable(PCA_ADDR, true, LEFT_EYE_PORT);
   if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
-    Serial.println(F("SSD1306 allocation failed"));
+    Serial.println(F("Left SSD1306 allocation failed"));
+  }
+
+  muxPortEnable(PCA_ADDR, true, RIGHT_EYE_PORT);
+  if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
+    Serial.println(F("Right SSD1306 allocation failed"));
   }
 
   eyesOpen(lidSpeed, eyeSocketSizey);
@@ -169,6 +177,13 @@ void loop() {
 }
 
 void eyes(int eyeSocketPosx, int eyeSocketPosy, int eyeSocketSizex, int eyeSocketSizey, int eyeIrisPosx, int eyeIrisPosy, int eyeIrisSizex, int eyeIrisSizey) {
+  muxPortEnable(PCA_ADDR, true, LEFT_EYE_PORT);
+  display.clearDisplay();
+  drawSocket(eyeSocketPosx, eyeSocketPosy, eyeSocketSizex, eyeSocketSizey);
+  drawIris(eyeIrisPosx, eyeIrisPosy, eyeIrisSizex, eyeIrisSizey);
+  display.display();
+
+  muxPortEnable(PCA_ADDR, true, RIGHT_EYE_PORT);
   display.clearDisplay();
   drawSocket(eyeSocketPosx, eyeSocketPosy, eyeSocketSizex, eyeSocketSizey);
   drawIris(eyeIrisPosx, eyeIrisPosy, eyeIrisSizex, eyeIrisSizey);
@@ -191,6 +206,27 @@ void drawIris(int posx, int posy, int sizex, int sizey) {
 }
 
 void eyesOpen(int increment, int finalSize) {
+  muxPortEnable(PCA_ADDR, true, LEFT_EYE_PORT);
+  display.clearDisplay();
+  eyes(eyeSocketPosx, eyeSocketPosy, eyeSocketSizex, 1, eyeIrisPosx, eyeIrisPosy, 0, 0);
+  display.display();
+  delay(500);
+  for (int i = 1; i < finalSize; i = i + increment)
+  {
+    if (i <= eyeIrisSizey)
+    {
+      eyes(eyeSocketPosx, eyeSocketPosy, eyeSocketSizex, i, eyeIrisPosx, eyeIrisPosy, 0, 0);
+    }
+    else
+    {
+      eyes(eyeSocketPosx, eyeSocketPosy, eyeSocketSizex, i, eyeIrisPosx, eyeIrisPosy, eyeIrisSizex, eyeIrisSizey);
+    }
+    display.display();
+  }
+  eyes(eyeSocketPosx, eyeSocketPosy, eyeSocketSizex, finalSize, eyeIrisPosx, eyeIrisPosy, eyeIrisSizex, eyeIrisSizey);
+  display.display();
+
+  muxPortEnable(PCA_ADDR, true, RIGHT_EYE_PORT);
   display.clearDisplay();
   eyes(eyeSocketPosx, eyeSocketPosy, eyeSocketSizex, 1, eyeIrisPosx, eyeIrisPosy, 0, 0);
   display.display();
@@ -212,6 +248,27 @@ void eyesOpen(int increment, int finalSize) {
 }
 
 void eyesClose(int increment, int finalSize) {
+  muxPortEnable(PCA_ADDR, true, LEFT_EYE_PORT);
+  display.clearDisplay();
+  eyes();
+  display.display();
+  delay(500);
+  for (int i = eyeSocketSizey; i > 1; i = i - increment)
+  {
+    if (i >= eyeIrisSizey)
+    {
+      eyes(eyeSocketPosx, eyeSocketPosy, eyeSocketSizex, i, eyeIrisPosx, eyeIrisPosy, eyeIrisSizex, eyeIrisSizey);
+    }
+    else
+    {
+      eyes(eyeSocketPosx, eyeSocketPosy, eyeSocketSizex, i, eyeIrisPosx, eyeIrisPosy, 0, 0);
+    }
+    display.display();
+  }
+  eyes(eyeSocketPosx, eyeSocketPosy, eyeSocketSizex, finalSize, eyeIrisPosx, eyeIrisPosy, 0, 0);
+  display.display();
+
+  muxPortEnable(PCA_ADDR, true, RIGHT_EYE_PORT);
   display.clearDisplay();
   eyes();
   display.display();
@@ -233,6 +290,15 @@ void eyesClose(int increment, int finalSize) {
 }
 
 void eyesBlink(int duration) {
+  muxPortEnable(PCA_ADDR, true, LEFT_EYE_PORT);
+  display.clearDisplay();
+  eyes(eyeSocketPosx, eyeSocketPosy, eyeSocketSizex, 4, eyeIrisPosx, eyeIrisPosy, 0, 0);
+  display.display();
+  delay(duration);
+  eyes();
+  display.display();
+
+  muxPortEnable(PCA_ADDR, true, RIGHT_EYE_PORT);
   display.clearDisplay();
   eyes(eyeSocketPosx, eyeSocketPosy, eyeSocketSizex, 4, eyeIrisPosx, eyeIrisPosy, 0, 0);
   display.display();
@@ -242,9 +308,19 @@ void eyesBlink(int duration) {
 }
 
 void eyesLookx(int increment, int distance) {
+  muxPortEnable(PCA_ADDR, true, LEFT_EYE_PORT);
   display.clearDisplay();
   int finalSize = 0;
   finalSize = eyeIrisPosx + distance;
+  eyes(eyeSocketPosx, eyeSocketPosy, eyeSocketSizex, eyeSocketSizey, finalSize, eyeIrisPosy, eyeIrisSizex, eyeIrisSizey);
+  display.display();
+  delay(500);
+  eyes();
+
+  muxPortEnable(PCA_ADDR, true, RIGHT_EYE_PORT);
+  display.clearDisplay();
+  finalSize = 0;
+  finalSize = eyeIrisPosx - distance;
   eyes(eyeSocketPosx, eyeSocketPosy, eyeSocketSizex, eyeSocketSizey, finalSize, eyeIrisPosy, eyeIrisSizex, eyeIrisSizey);
   display.display();
   delay(500);
