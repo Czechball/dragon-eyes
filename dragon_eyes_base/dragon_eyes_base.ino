@@ -3,21 +3,16 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <DNSServer.h>
-#include <WiFi.h>
-#include <AsyncTCP.h>
-#include "ESPAsyncWebServer.h"
+#include <ESP8266WiFi.h>
+#include <ESPAsyncTCP.h>
+#include <ESPAsyncWebServer.h>
 
-#define PCA_ADDR 0x77
-#define LEFT_EYE_PORT 0
+#define PCA_ADDR 0x70
+#define LEFT_EYE_PORT 2
 #define RIGHT_EYE_PORT 1
 
 DNSServer dnsServer;
 AsyncWebServer server(80);
-
-String user_name;
-String proficiency;
-bool name_received = false;
-bool proficiency_received = false;
 
 const char *ssid = "Dragon's Eyes";
 const char *password = "12345678";
@@ -36,10 +31,10 @@ const char index_html[] PROGMEM = R"rawliteral(
   </form>
 </body></html>)rawliteral";
 
-#define SCREEN_WIDTH	128
-#define SCREEN_HEIGHT	64
-#define OLED_RESET		-1
-#define SCREEN_ADDRESS	0x3C
+#define SCREEN_WIDTH  128
+#define SCREEN_HEIGHT 64
+#define OLED_RESET    -1
+#define SCREEN_ADDRESS  0x3C
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 class CaptiveRequestHandler : public AsyncWebHandler {
@@ -126,10 +121,12 @@ void setup() {
 
   muxPortEnable(PCA_ADDR, true, RIGHT_EYE_PORT);
   if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
-    Serial.println(F("Right SSD1306 allocation failed"));
+    Serial.println(F("Left SSD1306 allocation failed"));
   }
+  Wire.setClock(400000);
 
   eyesOpen(lidSpeed, eyeSocketSizey);
+
   Serial.println("All Done, starting eyes...");
   eyes();
 }
@@ -177,17 +174,19 @@ void loop() {
 }
 
 void eyes(int eyeSocketPosx, int eyeSocketPosy, int eyeSocketSizex, int eyeSocketSizey, int eyeIrisPosx, int eyeIrisPosy, int eyeIrisSizex, int eyeIrisSizey) {
-  muxPortEnable(PCA_ADDR, true, LEFT_EYE_PORT);
+  newClearDisplay();
+  drawSocket(eyeSocketPosx, eyeSocketPosy, eyeSocketSizex, eyeSocketSizey);
+  drawIris(eyeIrisPosx, eyeIrisPosy, eyeIrisSizex, eyeIrisSizey);
+  newDisplayDisplay();
+
+}
+
+void eyes_dummy(int eyeSocketPosx, int eyeSocketPosy, int eyeSocketSizex, int eyeSocketSizey, int eyeIrisPosx, int eyeIrisPosy, int eyeIrisSizex, int eyeIrisSizey) {
   display.clearDisplay();
   drawSocket(eyeSocketPosx, eyeSocketPosy, eyeSocketSizex, eyeSocketSizey);
   drawIris(eyeIrisPosx, eyeIrisPosy, eyeIrisSizex, eyeIrisSizey);
   display.display();
 
-  muxPortEnable(PCA_ADDR, true, RIGHT_EYE_PORT);
-  display.clearDisplay();
-  drawSocket(eyeSocketPosx, eyeSocketPosy, eyeSocketSizex, eyeSocketSizey);
-  drawIris(eyeIrisPosx, eyeIrisPosy, eyeIrisSizex, eyeIrisSizey);
-  display.display();
 }
 
 void eyes()
@@ -206,10 +205,9 @@ void drawIris(int posx, int posy, int sizex, int sizey) {
 }
 
 void eyesOpen(int increment, int finalSize) {
-  muxPortEnable(PCA_ADDR, true, LEFT_EYE_PORT);
-  display.clearDisplay();
+  newClearDisplay();
   eyes(eyeSocketPosx, eyeSocketPosy, eyeSocketSizex, 1, eyeIrisPosx, eyeIrisPosy, 0, 0);
-  display.display();
+  newDisplayDisplay();
   delay(500);
   for (int i = 1; i < finalSize; i = i + increment)
   {
@@ -221,37 +219,16 @@ void eyesOpen(int increment, int finalSize) {
     {
       eyes(eyeSocketPosx, eyeSocketPosy, eyeSocketSizex, i, eyeIrisPosx, eyeIrisPosy, eyeIrisSizex, eyeIrisSizey);
     }
-    display.display();
+    newDisplayDisplay();
   }
   eyes(eyeSocketPosx, eyeSocketPosy, eyeSocketSizex, finalSize, eyeIrisPosx, eyeIrisPosy, eyeIrisSizex, eyeIrisSizey);
-  display.display();
-
-  muxPortEnable(PCA_ADDR, true, RIGHT_EYE_PORT);
-  display.clearDisplay();
-  eyes(eyeSocketPosx, eyeSocketPosy, eyeSocketSizex, 1, eyeIrisPosx, eyeIrisPosy, 0, 0);
-  display.display();
-  delay(500);
-  for (int i = 1; i < finalSize; i = i + increment)
-  {
-    if (i <= eyeIrisSizey)
-    {
-      eyes(eyeSocketPosx, eyeSocketPosy, eyeSocketSizex, i, eyeIrisPosx, eyeIrisPosy, 0, 0);
-    }
-    else
-    {
-      eyes(eyeSocketPosx, eyeSocketPosy, eyeSocketSizex, i, eyeIrisPosx, eyeIrisPosy, eyeIrisSizex, eyeIrisSizey);
-    }
-    display.display();
-  }
-  eyes(eyeSocketPosx, eyeSocketPosy, eyeSocketSizex, finalSize, eyeIrisPosx, eyeIrisPosy, eyeIrisSizex, eyeIrisSizey);
-  display.display();
+  newDisplayDisplay();
 }
 
 void eyesClose(int increment, int finalSize) {
-  muxPortEnable(PCA_ADDR, true, LEFT_EYE_PORT);
-  display.clearDisplay();
+  newClearDisplay();
   eyes();
-  display.display();
+  newDisplayDisplay();
   delay(500);
   for (int i = eyeSocketSizey; i > 1; i = i - increment)
   {
@@ -263,48 +240,21 @@ void eyesClose(int increment, int finalSize) {
     {
       eyes(eyeSocketPosx, eyeSocketPosy, eyeSocketSizex, i, eyeIrisPosx, eyeIrisPosy, 0, 0);
     }
-    display.display();
+    newDisplayDisplay();
   }
   eyes(eyeSocketPosx, eyeSocketPosy, eyeSocketSizex, finalSize, eyeIrisPosx, eyeIrisPosy, 0, 0);
-  display.display();
+  newDisplayDisplay();
 
-  muxPortEnable(PCA_ADDR, true, RIGHT_EYE_PORT);
-  display.clearDisplay();
-  eyes();
-  display.display();
-  delay(500);
-  for (int i = eyeSocketSizey; i > 1; i = i - increment)
-  {
-    if (i >= eyeIrisSizey)
-    {
-      eyes(eyeSocketPosx, eyeSocketPosy, eyeSocketSizex, i, eyeIrisPosx, eyeIrisPosy, eyeIrisSizex, eyeIrisSizey);
-    }
-    else
-    {
-      eyes(eyeSocketPosx, eyeSocketPosy, eyeSocketSizex, i, eyeIrisPosx, eyeIrisPosy, 0, 0);
-    }
-    display.display();
-  }
-  eyes(eyeSocketPosx, eyeSocketPosy, eyeSocketSizex, finalSize, eyeIrisPosx, eyeIrisPosy, 0, 0);
-  display.display();
 }
 
 void eyesBlink(int duration) {
-  muxPortEnable(PCA_ADDR, true, LEFT_EYE_PORT);
-  display.clearDisplay();
+  newClearDisplay();
   eyes(eyeSocketPosx, eyeSocketPosy, eyeSocketSizex, 4, eyeIrisPosx, eyeIrisPosy, 0, 0);
-  display.display();
+  newDisplayDisplay();
   delay(duration);
   eyes();
-  display.display();
+  newDisplayDisplay();
 
-  muxPortEnable(PCA_ADDR, true, RIGHT_EYE_PORT);
-  display.clearDisplay();
-  eyes(eyeSocketPosx, eyeSocketPosy, eyeSocketSizex, 4, eyeIrisPosx, eyeIrisPosy, 0, 0);
-  display.display();
-  delay(duration);
-  eyes();
-  display.display();
 }
 
 void eyesLookx(int increment, int distance) {
@@ -312,19 +262,19 @@ void eyesLookx(int increment, int distance) {
   display.clearDisplay();
   int finalSize = 0;
   finalSize = eyeIrisPosx + distance;
-  eyes(eyeSocketPosx, eyeSocketPosy, eyeSocketSizex, eyeSocketSizey, finalSize, eyeIrisPosy, eyeIrisSizex, eyeIrisSizey);
+  eyes_dummy(eyeSocketPosx, eyeSocketPosy, eyeSocketSizex, eyeSocketSizey, finalSize, eyeIrisPosy, eyeIrisSizex, eyeIrisSizey);
   display.display();
-  delay(500);
-  eyes();
-
+  //delay(500);
+  //eyes();
+  
   muxPortEnable(PCA_ADDR, true, RIGHT_EYE_PORT);
   display.clearDisplay();
   finalSize = 0;
   finalSize = eyeIrisPosx - distance;
-  eyes(eyeSocketPosx, eyeSocketPosy, eyeSocketSizex, eyeSocketSizey, finalSize, eyeIrisPosy, eyeIrisSizex, eyeIrisSizey);
+  eyes_dummy(eyeSocketPosx, eyeSocketPosy, eyeSocketSizex, eyeSocketSizey, finalSize, eyeIrisPosy, eyeIrisSizex, eyeIrisSizey);
   display.display();
   delay(500);
-  eyes();
+  //eyes();
 }
 
 void eyesIdle() {
@@ -347,9 +297,23 @@ void idleDelay(int delaynum) {
   }
 }
 
+void newClearDisplay(){
+  muxPortEnable(PCA_ADDR, true, LEFT_EYE_PORT);
+  display.clearDisplay();
+  muxPortEnable(PCA_ADDR, true, RIGHT_EYE_PORT);
+  display.clearDisplay();
+}
+
+void newDisplayDisplay(){
+  muxPortEnable(PCA_ADDR, true, LEFT_EYE_PORT);
+  display.display();
+  muxPortEnable(PCA_ADDR, true, RIGHT_EYE_PORT);
+  display.display();
+}
+
 bool muxPortEnable(int muxAddres, bool enable, uint8_t port)
 {
-  Serial.println("muxPortEnable: entering function (address " + (String)muxAddres + ", enable " + (String)enable + ", port " + (String)port + ")");
+  //Serial.println("muxPortEnable: entering function (address " + (String)muxAddres + ", enable " + (String)enable + ", port " + (String)port + ")");
   uint8_t muxRes = 0;
   uint32_t retbytes;
 
@@ -361,19 +325,19 @@ bool muxPortEnable(int muxAddres, bool enable, uint8_t port)
   Wire.write(port);
   Wire.endTransmission(true);
 
-//  if (Wire.lastError()) {
-//    Serial.println("muxPortEnable: I2C write error #" + (String)Wire.lastError());
-//    //resetI2C();
-//    return false;
-//  }
+  //  if (Wire.lastError()) {
+  //    Serial.println("muxPortEnable: I2C write error #" + (String)Wire.lastError());
+  //    //resetI2C();
+  //    return false;
+  //  }
 
   retbytes = Wire.requestFrom(muxAddres,  1, 1);
 
-//  if (Wire.lastError()) {
-//    Serial.println("muxPortEnable: I2C read error #" + (String)Wire.lastError());
-//    //resetI2C();
-//    return false;
-//  }
+  //  if (Wire.lastError()) {
+  //    Serial.println("muxPortEnable: I2C read error #" + (String)Wire.lastError());
+  //    //resetI2C();
+  //    return false;
+  //  }
 
   if (retbytes == 1) {
     muxRes = Wire.read();
@@ -381,11 +345,11 @@ bool muxPortEnable(int muxAddres, bool enable, uint8_t port)
       delay (5);
       return true;
     } else {
-      Serial.println("muxPortEnable: I2C slave returned (" + (String)muxRes + ") instead of (" + (String)port + ")");
+      //Serial.println("muxPortEnable: I2C slave returned (" + (String)muxRes + ") instead of (" + (String)port + ")");
       return false;
     }
   } else {
-    Serial.println("muxPortEnable: I2C slave did not return 1 byte");
+    //Serial.println("muxPortEnable: I2C slave did not return 1 byte");
     return false;
   }
 }
