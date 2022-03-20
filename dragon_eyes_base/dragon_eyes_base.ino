@@ -6,6 +6,9 @@
 #include <ESP8266WiFi.h>
 #include <ESPAsyncTCP.h>
 #include <ESPAsyncWebServer.h>
+#include "images.h"
+
+void showImage(unsigned char *name);
 
 #define PCA_ADDR 0x70
 #define LEFT_EYE_PORT 1
@@ -28,6 +31,18 @@ const char index_html[] PROGMEM = R"rawliteral(
     <input type="submit" name="open" value="Open">
     <input type="submit" name="close" value="Close">
     <input type="submit" name="idle" value="Idle">
+  </form>
+  <form action="/img">
+  <select>
+    <option value="silvron">Silvron</option>
+    <option value="v2">v2.0</option>
+    <option value="uzlabina">SPŠE Logo</option>
+    <option value="hourglass">Hourglass</option>
+    <option value="danger">Danger</option>
+    <option value="frog">Frog</option>
+    <option value="webnings">???</option>
+  </select>
+  <input type="submit" value="Submit" />
   </form>
 </body></html>)rawliteral";
 
@@ -73,8 +88,8 @@ int irisSpeed = 0.5;
 
 // default web requests statuses
 
-enum { NONE_, OPEN_, CLOSE_, IDLE_ } web;
-
+enum { NONE_, OPEN_, CLOSE_, IDLE_, IMAGE_ } web;
+unsigned char *img;
 
 void setupServer() {
   server.on("/", HTTP_GET, [](AsyncWebServerRequest * request) {
@@ -92,6 +107,43 @@ void setupServer() {
     }
     if (request->hasParam("idle")) {
       web = IDLE_;
+    }
+    request->send(200, "text/html", "The eye command has been sent <br><a href=\"/\">Return to Home Page</a>");
+  });
+  server.on("/img", HTTP_GET, [] (AsyncWebServerRequest * request) {
+    if (request->hasParam("silvron")) {
+      web = IMAGE_;
+      img = silvron;
+    }
+    if (request->hasParam("v2"))
+    {
+      web = IMAGE_;
+      img = v2;
+    }
+    if (request->hasParam("uzlabina"))
+    {
+      web = IMAGE_;
+      img = uzlabina;
+    }
+    if (request->hasParam("hourglass"))
+    {
+      web = IMAGE_;
+      img = hourglass;
+    }
+    if (request->hasParam("danger"))
+    {
+      web = IMAGE_;
+      img = danger;
+    }
+    if (request->hasParam("frog"))
+    {
+      web = IMAGE_;
+      img = frog;
+    }
+    if (request->hasParam("webnings"))
+    {
+      web = IMAGE_;
+      img = webnings;
     }
     request->send(200, "text/html", "The eye command has been sent <br><a href=\"/\">Return to Home Page</a>");
   });
@@ -145,6 +197,9 @@ void loop() {
       break;
     case IDLE_:
       eyesIdle();
+      break;
+    case IMAGE_:
+      showImage(img);
       break;
     default:
       eyesIdle();
@@ -340,6 +395,12 @@ void idleDelay(int delaynum) {
   {
     delay(delaynum);
   }
+}
+
+void showImage(unsigned char *name) {
+  display.clearDisplay();
+  display.drawBitmap(0, 0, name, 128, 64, 1);
+  display.display();
 }
 
 bool muxPortEnable(int muxAddres, bool enable, uint8_t port)
