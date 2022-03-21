@@ -6,10 +6,11 @@
 #include <ESP8266WiFi.h>
 #include <ESPAsyncTCP.h>
 #include <ESPAsyncWebServer.h>
+#include "images.h"
 
 #define PCA_ADDR 0x70
-#define LEFT_EYE_PORT 2
-#define RIGHT_EYE_PORT 1
+#define LEFT_EYE_PORT 1
+#define RIGHT_EYE_PORT 2
 
 DNSServer dnsServer;
 AsyncWebServer server(80);
@@ -30,7 +31,7 @@ const char index_html[] PROGMEM = R"rawliteral(
     <input type="submit" name="idle" value="Idle">
   </form>
   <form action="/img">
-  <select>
+  <select name="image">
     <option value="silvron">Silvron</option>
     <option value="v2">v2.0</option>
     <option value="uzlabina">SPŠE Logo</option>
@@ -40,6 +41,14 @@ const char index_html[] PROGMEM = R"rawliteral(
     <option value="webnings">???</option>
   </select>
   <input type="submit" value="Submit" />
+  </form>
+  <form action="/invert">
+    <input type="submit" name="0" value="Normal Colors">
+    <input type="submit" name="1" value="Inverted Colors">
+  </form>
+  <form action="/direction">
+    <input type="submit" name="1" value="Normal Eyes">
+    <input type="submit" name="0" value="Inverted Eyes">
   </form>
 </body></html>)rawliteral";
 
@@ -83,10 +92,13 @@ int eyeSocketPosy = display.height() / 2;
 int lidSpeed = 8;
 int irisSpeed = 0.5;
 
+int invert = 0;
+int direction = 0;
+
 // default web requests statuses
 
 enum { NONE_, OPEN_, CLOSE_, IDLE_, IMAGE_ } web;
-unsigned char *img;
+char imageName = 's';
 
 void setupServer() {
   server.on("/", HTTP_GET, [](AsyncWebServerRequest * request) {
@@ -107,40 +119,36 @@ void setupServer() {
     }
     request->send(200, "text/html", "The eye command has been sent <br><a href=\"/\">Return to Home Page</a>");
   });
+
+  server.on("/invert", HTTP_GET, [] (AsyncWebServerRequest * request) {
+    invert = 0;
+    if (request->hasParam("0")) {
+      invert = 0;
+    }
+    if (request->hasParam("1")) {
+      invert = 1;
+    }
+    request->send(200, "text/html", "The eye command has been sent <br><a href=\"/\">Return to Home Page</a>");
+  });
+
+  server.on("/direction", HTTP_GET, [] (AsyncWebServerRequest * request) {
+    invert = 0;
+    if (request->hasParam("0")) {
+      direction = 0;
+    }
+    if (request->hasParam("1")) {
+      direction = 1;
+    }
+    request->send(200, "text/html", "The eye command has been sent <br><a href=\"/\">Return to Home Page</a>");
+  });
+
+
   server.on("/img", HTTP_GET, [] (AsyncWebServerRequest * request) {
-    if (request->hasParam("silvron")) {
+    String param;
+    if(request->hasParam("image")){
       web = IMAGE_;
-      img = silvron;
-    }
-    if (request->hasParam("v2"))
-    {
-      web = IMAGE_;
-      img = v2;
-    }
-    if (request->hasParam("uzlabina"))
-    {
-      web = IMAGE_;
-      img = uzlabina;
-    }
-    if (request->hasParam("hourglass"))
-    {
-      web = IMAGE_;
-      img = hourglass;
-    }
-    if (request->hasParam("danger"))
-    {
-      web = IMAGE_;
-      img = danger;
-    }
-    if (request->hasParam("frog"))
-    {
-      web = IMAGE_;
-      img = frog;
-    }
-    if (request->hasParam("webnings"))
-    {
-      web = IMAGE_;
-      img = webnings;
+      param = request->getParam("image")->value();
+      imageName = param.charAt(0);
     }
     request->send(200, "text/html", "The eye command has been sent <br><a href=\"/\">Return to Home Page</a>");
   });
@@ -163,15 +171,18 @@ void setup() {
 
   Serial.println("Initializing display...");
   // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
+  //delay(1000);
   muxPortEnable(PCA_ADDR, true, LEFT_EYE_PORT);
   if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
     Serial.println(F("Left SSD1306 allocation failed"));
   }
 
+  //delay(1000);
   muxPortEnable(PCA_ADDR, true, RIGHT_EYE_PORT);
   if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
     Serial.println(F("Left SSD1306 allocation failed"));
   }
+
   Wire.setClock(400000);
 
   eyesOpen(lidSpeed, eyeSocketSizey);
@@ -180,8 +191,15 @@ void setup() {
   eyes();
 }
 
+void showImage(unsigned const char *name) {
+  newClearDisplay();
+  display.drawBitmap(0, 0, name, 128, 64, 1);
+  newDisplayDisplay();
+}
+
 void loop() {
   dnsServer.processNextRequest();
+  newInvertDisplay(invert);
   switch (web) {
     case NONE_:
       eyes();
@@ -198,7 +216,34 @@ void loop() {
       eyesIdle();
       break;
     case IMAGE_:
-      showImage(img);
+    if (imageName == 's') {
+      showImage(silvron);
+    }
+    else if (imageName == 'v')
+    {
+      showImage(v2);
+    }
+    else if (imageName == 'u') 
+    {
+      showImage(uzlabina);
+    }
+    else if (imageName == 'h')
+    {
+      showImage(hourglass);
+    }
+    else if (imageName == 'd')
+    {
+      showImage(danger);
+    }
+    else if (imageName == 'f')
+    {
+      showImage(frog);
+    }
+    else if (imageName == 'w')
+    {
+      showImage(webnings);
+    }
+      //if(img != NULL) showImage(img);
       break;
     default:
       eyesIdle();
@@ -260,7 +305,6 @@ void eyesOpen(int increment, int finalSize) {
   newClearDisplay();
   eyes(eyeSocketPosx, eyeSocketPosy, eyeSocketSizex, 1, eyeIrisPosx, eyeIrisPosy, 0, 0);
   newDisplayDisplay();
-  delay(500);
   for (int i = 1; i < finalSize; i = i + increment)
   {
     if (i <= eyeIrisSizey)
@@ -281,7 +325,6 @@ void eyesClose(int increment, int finalSize) {
   newClearDisplay();
   eyes();
   newDisplayDisplay();
-  delay(500);
   for (int i = eyeSocketSizey; i > 1; i = i - increment)
   {
     if (i >= eyeIrisSizey)
@@ -322,10 +365,15 @@ void eyesLookx(int increment, int distance) {
   muxPortEnable(PCA_ADDR, true, RIGHT_EYE_PORT);
   display.clearDisplay();
   finalSize = 0;
-  finalSize = eyeIrisPosx - distance;
+  if (direction == 0)
+  {
+    finalSize = eyeIrisPosx - distance;
+  } else {
+    finalSize = eyeIrisPosx + distance;
+  }
   eyes_dummy(eyeSocketPosx, eyeSocketPosy, eyeSocketSizex, eyeSocketSizey, finalSize, eyeIrisPosy, eyeIrisSizex, eyeIrisSizey);
   display.display();
-  delay(500);
+  //delay(500);
   //eyes();
 }
 
@@ -349,6 +397,21 @@ void idleDelay(int delaynum) {
   }
 }
 
+void newInvertDisplay(int invert) {
+  if (invert == 0)
+  {
+  muxPortEnable(PCA_ADDR, true, LEFT_EYE_PORT);
+  display.invertDisplay(false);
+  muxPortEnable(PCA_ADDR, true, RIGHT_EYE_PORT);
+  display.invertDisplay(false);
+  } else {
+  muxPortEnable(PCA_ADDR, true, LEFT_EYE_PORT);
+  display.invertDisplay(true);
+  muxPortEnable(PCA_ADDR, true, RIGHT_EYE_PORT);
+  display.invertDisplay(true);
+  }
+}
+
 void newClearDisplay(){
   muxPortEnable(PCA_ADDR, true, LEFT_EYE_PORT);
   display.clearDisplay();
@@ -360,12 +423,6 @@ void newDisplayDisplay(){
   muxPortEnable(PCA_ADDR, true, LEFT_EYE_PORT);
   display.display();
   muxPortEnable(PCA_ADDR, true, RIGHT_EYE_PORT);
-  display.display();
-}
-
-void showImage(unsigned char *name) {
-  display.clearDisplay();
-  display.drawBitmap(0, 0, name, 128, 64, 1);
   display.display();
 }
 
